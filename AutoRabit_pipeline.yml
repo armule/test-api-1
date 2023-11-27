@@ -38,14 +38,14 @@ definitions:
           
 pipelines:
   branches:
-    Development
+    Develop:
       - step: *message
       - step: *settings
       - step: *publish-to-exchange
       - step: 
           <<: *deploy
           deployment: DEV
-    release/*:
+    feature/*:
       - step: *message
       - step: 
           <<: *deploy
