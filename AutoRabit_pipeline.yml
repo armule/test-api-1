@@ -1,0 +1,59 @@
+image: maven:3.8.4-jdk-8
+
+definitions: 
+  steps:
+    - step: &message
+        name: Status Message
+        clone:
+          enabled: false
+        script:
+          - echo "CICD Pipeline Steps Starts"
+                    
+    - step: &settings
+        name: Create Settings.xml
+        caches:
+          - maven
+        script:
+          - echo "Create Settings.xml"
+          - echo PHNldHRpbmdzIHhtbG5zPSJodHRwOi8vbWF2ZW4uYXBhY2hlLm9yZy9TRVRUSU5HUy8xLjAuMCINCiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIg0KIHhzaTpzY2hlbWFMb2NhdGlvbj0iaHR0cDovL21hdmVuLmFwYWNoZS5vcmcvU0VUVElOR1MvMS4wLjANCiBodHRwczovL21hdmVuLmFwYWNoZS5vcmcveHNkL3NldHRpbmdzLTEuMC4wLnhzZCI+DQogPHNlcnZlcnM+DQogPHNlcnZlcj4NCiA8aWQ+UmVwb3NpdG9yeTwvaWQ+DQogPHVzZXJuYW1lPiR7dXNlcn08L3VzZXJuYW1lPg0KIDxwYXNzd29yZD4ke3Bhc3N9PC9wYXNzd29yZD4NCiA8L3NlcnZlcj4NCiA8c2VydmVyPg0KIDxpZD5hbnlwb2ludC1leGNoYW5nZS12MzwvaWQ+DQogPHVzZXJuYW1lPiR7dXNlcn08L3VzZXJuYW1lPg0KIDxwYXNzd29yZD4ke3Bhc3N9PC9wYXNzd29yZD4NCiA8L3NlcnZlcj4NCiAgPHNlcnZlcj4NCiA8aWQ+bXVsZXNvZnQtcmVsZWFzZXM8L2lkPg0KIDx1c2VybmFtZT4ke3VzZXJ9PC91c2VybmFtZT4NCiA8cGFzc3dvcmQ+JHtwYXNzfTwvcGFzc3dvcmQ+DQogPC9zZXJ2ZXI+DQogPC9zZXJ2ZXJzPg0KPC9zZXR0aW5ncz4= | base64 --decode > settings.xml
+        artifacts:
+          - settings.xml
+              
+    - step: &publish-to-exchange
+        name: Publish To Exchange
+        caches:
+          - maven
+        script:
+          - echo "Compile and push the build to Cloudhub 2.0 Exchange"    
+          - mvn clean deploy -s settings.xml -DskipTests           
+            
+    - step: &deploy
+        name: Deployment to DEV Environment
+        caches:
+          - maven
+        deployment: feature
+        script:
+          - echo "Deployment to Development Environment Started !!"
+          - mvn deploy -DmuleDeploy -s settings.xml -DskipTests
+          
+pipelines:
+  branches:
+    Develop:
+      - step: *message
+      - step: *settings
+      - step: *publish-to-exchange
+      - step: 
+          <<: *deploy
+          deployment: DEV
+    feature/*:
+      - step: *message
+      - step: 
+          <<: *deploy
+          name: Deployment to TEST Environment
+          trigger: 'manual'
+          deployment: TEST
+      - step:
+          <<: *deploy
+          name: Deployment to PROD Environment
+          trigger: 'manual'
+          deployment: PROD
